@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coosaw Landing — RV Resort Master Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a1519; --bg2:#0c1a20;
+  --panel:rgba(11,23,28,.80); --panel2:rgba(14,28,34,.94);
+  --line:rgba(230,196,91,.18); --line2:rgba(255,255,255,.08);
+  --text:#e9efe9; --dim:#9aab9f;
+  --gold:#e6c45b; --gold2:#e0a955; --teal:#19b8a6; --teal2:#0f766e;
+  --water:#4ba3c3; --marsh:#7faa46; --red:#e0654f; --good:#5fc08a;
+  --p1:#e6c45b; --p2:#19b8a6; --p3:#4ba3c3;
+  --r:14px; --shadow:0 18px 50px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:15px/1.55 Inter,system-ui,sans-serif;overflow:hidden}
+b,.mono{font-variant-numeric:tabular-nums}
+#stage{position:fixed;inset:0}
+#gl{width:100%;height:100%;display:block;cursor:grab}
+#gl:active{cursor:grabbing}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lbl{color:#fff;font:600 11px/1.1 Inter;text-shadow:0 1px 4px #000,0 0 12px rgba(0,0,0,.9);white-space:nowrap;letter-spacing:.02em}
+.lbl-a{font:700 12px/1 'Saira Condensed';letter-spacing:.22em;color:rgba(233,239,233,.7)}
+.lbl-b{color:#ffe9b8;font-size:10.5px}
+.glass{background:var(--panel);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+
+/* header */
+#hdr{position:fixed;top:14px;left:14px;z-index:10;padding:13px 18px 12px;max-width:430px}
+#hdr h1{font:700 30px/1 'Saira Condensed';letter-spacing:.05em;color:var(--gold);text-transform:uppercase}
+#hdr h1 span{color:var(--text)}
+#hdr .where{color:var(--dim);font-size:12.5px;margin-top:3px}
+#chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.stat{background:rgba(255,255,255,.05);border:1px solid var(--line2);border-radius:8px;padding:4px 9px;font:600 10.5px/1.3 Inter;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+.stat b{display:block;font:600 14px/1.15 'JetBrains Mono';color:var(--gold);text-transform:none}
+
+/* left rail */
+#left{position:fixed;left:14px;top:188px;bottom:66px;width:286px;z-index:9;display:flex;flex-direction:column;padding:12px 0 6px}
+#left h4{font:700 11px/1 'Saira Condensed';letter-spacing:.2em;color:var(--dim);padding:10px 16px 7px;text-transform:uppercase}
+#left h4:first-child{padding-top:2px}
+.switch{display:flex;gap:6px;padding:0 14px 8px}
+.switch button{flex:1}
+#alist{overflow-y:auto;flex:1;scrollbar-width:thin;scrollbar-color:#2c3a36 transparent}
+.aitem{display:flex;align-items:center;gap:9px;padding:7px 14px;cursor:pointer;border-left:2px solid transparent;transition:background .18s}
+.aitem:hover{background:rgba(255,255,255,.05)}
+.aitem .dot{width:9px;height:9px;border-radius:2px;flex:none}
+.an{flex:1;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac{font:600 11px 'JetBrains Mono';color:var(--dim)}
+
+/* right detail */
+#detail{position:fixed;right:14px;top:14px;bottom:66px;width:380px;z-index:9;padding:18px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#2c3a36 transparent}
+#detail h2{font:700 24px/1.05 'Saira Condensed';letter-spacing:.03em;margin:8px 0 4px;text-transform:uppercase}
+#detail h3{font:700 11px/1 'Saira Condensed';letter-spacing:.18em;color:var(--gold);margin:16px 0 8px;text-transform:uppercase}
+#detail .sub{color:var(--dim);font-size:13px}
+.row{display:flex;justify-content:space-between;gap:14px;padding:6.5px 0;border-bottom:1px solid var(--line2);font-size:12.5px}
+.row span{color:var(--dim)}
+.row b{font:600 12.5px 'JetBrains Mono';color:var(--text);text-align:right;max-width:225px}
+.note{font-size:12.5px;color:#c4cfc4}
+.warn{font-size:11.5px;color:#cbab6f;margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+.hint{font-size:12px;color:var(--dim);margin-top:14px}
+.chip{font:700 9.5px/1 Inter;letter-spacing:.05em;padding:3px 6px;border-radius:5px;color:#08110e;flex:none}
+.chip.gold{background:var(--gold)}.chip.site{background:var(--teal)}.chip.phase{background:var(--water)}
+.chip.p1{background:var(--p1)}.chip.p2{background:var(--p2)}.chip.p3{background:var(--p3)}
+
+/* buttons */
+button,select{font:600 12px Inter;color:var(--text);background:rgba(255,255,255,.06);border:1px solid var(--line2);border-radius:9px;padding:8px 12px;cursor:pointer;transition:all .18s}
+button:hover,select:hover{background:rgba(255,255,255,.12);border-color:var(--line)}
+button.on{background:rgba(25,184,166,.18);border-color:var(--teal);color:var(--teal)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+select{appearance:none;padding-right:26px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aab9f' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center}
+
+/* bottom bar */
+#bar{position:fixed;left:14px;right:14px;bottom:14px;z-index:10;display:flex;align-items:center;gap:8px;padding:8px 12px;flex-wrap:wrap}
+#bar .sp{flex:1}
+#north{width:34px;height:34px;flex:none;border-radius:50%;border:1px solid var(--line2);display:grid;place-items:center;font:700 12px 'Saira Condensed';color:var(--gold);background:rgba(255,255,255,.04)}
+#toggles{display:flex;gap:6px;flex-wrap:wrap}
+#pfbtn{background:rgba(230,196,91,.16);border-color:var(--gold);color:var(--gold)}
+
+/* pro forma dashboard */
+#pf{position:fixed;left:14px;right:14px;bottom:66px;z-index:20;max-height:60vh;overflow-y:auto;padding:16px 20px;transform:translateY(calc(100% + 80px));opacity:0;pointer-events:none;transition:transform .32s cubic-bezier(.16,1,.3,1),opacity .32s}
+#pf.open{transform:translateY(0);opacity:1;pointer-events:auto}
+#pfhdr{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+#pfhdr h3{font:700 16px/1 'Saira Condensed';letter-spacing:.12em;color:var(--gold);text-transform:uppercase}
+#scen{display:flex;gap:6px}
+#pf .grid{display:grid;grid-template-columns:1.1fr 1.4fr;gap:20px}
+.sliders{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+.sl label{display:flex;justify-content:space-between;font:600 11px Inter;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
+.sl label b{color:var(--gold);font:600 12px 'JetBrains Mono';text-transform:none}
+input[type=range]{width:100%;height:4px;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.14);border-radius:3px;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--teal);border:2px solid #0a1519;box-shadow:0 0 0 1px var(--teal)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--teal);border:2px solid #0a1519}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:rgba(255,255,255,.04);border:1px solid var(--line2);border-radius:10px;padding:9px 11px}
+.kpi span{display:block;font:600 9.5px Inter;color:var(--dim);text-transform:uppercase;letter-spacing:.05em}
+.kpi b{font:600 17px/1.2 'JetBrains Mono';color:var(--text)}
+.kpi.hero b{color:var(--gold)}
+.pfright{display:flex;flex-direction:column;gap:10px}
+#pfchart{width:100%;height:130px}
+.legend{display:flex;gap:14px;font-size:10.5px;color:var(--dim)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}
+
+/* developer brief */
+#brief{position:fixed;inset:0;z-index:40;background:rgba(4,8,10,.62);backdrop-filter:blur(6px);display:grid;place-items:center;transition:opacity .25s}
+#brief.off{opacity:0;pointer-events:none}
+#briefcard{width:min(960px,94vw);max-height:90vh;overflow-y:auto;padding:26px 30px;background:var(--panel2)}
+#briefcard h2{font:700 26px/1 'Saira Condensed';letter-spacing:.05em;color:var(--gold);text-transform:uppercase}
+#briefcard h3{font:700 12px/1 'Saira Condensed';letter-spacing:.16em;color:var(--gold);margin:18px 0 8px;text-transform:uppercase}
+#briefcard .sub{color:var(--dim);font-size:12.5px;margin:6px 0 12px}
+#briefcard .row b{max-width:none}
+#briefcard table{width:100%;border-collapse:collapse;font-size:11.8px;margin-top:4px}
+#briefcard th{text-align:left;font:700 10px Inter;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--line)}
+#briefcard td{padding:6px 8px;border-bottom:1px solid var(--line2);vertical-align:top}
+#briefcard td:nth-child(3){font-family:'JetBrains Mono';white-space:nowrap}
+#briefcard .totals{margin-top:12px;padding:10px 12px;background:rgba(230,196,91,.08);border:1px solid var(--line);border-radius:9px;font:500 12.5px 'JetBrains Mono'}
+#briefhdr{display:flex;align-items:start;justify-content:space-between;gap:14px}
+
+/* loading */
+#loading{position:fixed;inset:0;z-index:60;background:var(--bg);display:grid;place-items:center;transition:opacity .5s}
+#loading.off{opacity:0;pointer-events:none}
+#loading .box{text-align:center;width:min(420px,80vw)}
+#loading h1{font:700 46px/1 'Saira Condensed';letter-spacing:.07em;color:var(--gold);text-transform:uppercase}
+#loading h1 span{color:var(--text)}
+#loading .where{color:var(--dim);font-size:13px;margin:6px 0 22px}
+#loadtrack{height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+#loadbar{height:100%;width:0%;background:var(--gold);transition:width .25s}
+#loadmsg{margin-top:12px;font:500 12px 'JetBrains Mono';color:var(--dim)}
+#attr{position:fixed;right:16px;bottom:108px;z-index:8;font-size:9.5px;color:rgba(233,239,233,.34);text-align:right;pointer-events:none;max-width:300px}
+
+.card-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid var(--line2);margin:2px 0 8px;display:block}
+.brief-hero{width:100%;height:150px;object-fit:cover;border-radius:10px;border:1px solid var(--line2);margin-bottom:12px;display:block}
+#loadhero{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.22}
+#loading .box{position:relative;z-index:1}
+@media (max-width:1180px){#left{display:none}}
+@media (max-width:980px){#pf .grid{grid-template-columns:1fr}#detail{width:min(340px,86vw)}}
+@media (max-width:760px){#hdr{max-width:280px}#hdr h1{font-size:24px}.kpis{grid-template-columns:repeat(2,1fr)}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+  body *{visibility:hidden}#brief,#brief *{visibility:visible}
+  #brief{position:absolute;inset:0;background:#fff}
+  #briefcard{background:#fff;color:#000;max-height:none;box-shadow:none;border:none}
+  #briefcard h2,#briefcard h3{color:#1a1a1a}#briefcard td,#briefcard th{color:#000;border-color:#ccc}
+  #briefcard .sub,#briefcard .note{color:#222}#briefclose,#printbtn{display:none}
+  #briefcard .totals{background:#f3f3f3;border-color:#ccc}
+}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="gl" aria-label="3D RV resort master plan"></canvas></div>
+
+<header id="hdr" class="glass">
+  <h1>Coosaw <span>Landing</span></h1>
+  <div class="where">RV Resort &amp; Marina · 100–174 Airport Cir, Beaufort SC · ~38.56 ac</div>
+  <div id="chips">
+    <span class="stat">sites<b id="st-sites">—</b></span>
+    <span class="stat">all-in<b id="st-devcost">—</b></span>
+    <span class="stat">NOI<b id="st-noi">—</b></span>
+    <span class="stat">value<b id="st-value">—</b></span>
+  </div>
+</header>
+
+<aside id="left" class="glass">
+  <h4>Layout</h4>
+  <div class="switch" id="layoutsw">
+    <button data-layout="sketch" class="on">My Sketch</button>
+    <button data-layout="optimized">Optimized</button>
+  </div>
+  <div id="alist"></div>
+  <h4>Show / hide</h4>
+  <div class="switch" id="toggles" style="flex-wrap:wrap;padding-bottom:10px">
+    <button data-v="pads" class="on">Pads</button>
+    <button data-v="rvs" class="on">RVs</button>
+    <button data-v="trees" class="on">Trees</button>
+    <button data-v="water" class="on">Water</button>
+    <button data-v="boundary" class="on">Boundary</button>
+    <button data-v="labels" class="on">Labels</button>
+    <button data-v="survey" style="display:none">Survey</button>
+  </div>
+</aside>
+
+<aside id="detail" class="glass" aria-live="polite"></aside>
+
+<section id="pf" class="glass" aria-label="Pro forma">
+  <div id="pfhdr">
+    <h3>Pro Forma</h3>
+    <div id="scen">
+      <button data-scen="conservative">Conservative</button>
+      <button data-scen="base" class="on">Base</button>
+      <button data-scen="upside">Upside</button>
+    </div>
+    <div class="sp" style="flex:1"></div>
+    <button id="pfclose" aria-label="Close pro forma">✕</button>
+  </div>
+  <div class="grid">
+    <div class="sliders">
+      <div class="sl"><label>Occupancy <b id="v-occupancy"></b></label><input type="range" id="s-occupancy"></div>
+      <div class="sl"><label>Nightly rate <b id="v-rate"></b></label><input type="range" id="s-rate"></div>
+      <div class="sl"><label>OpEx ratio <b id="v-opexRatio"></b></label><input type="range" id="s-opexRatio"></div>
+      <div class="sl"><label>Capex / site <b id="v-capexPerSite"></b></label><input type="range" id="s-capexPerSite"></div>
+      <div class="sl"><label>Cap rate <b id="v-capRate"></b></label><input type="range" id="s-capRate"></div>
+      <div class="sl"><label>Loan-to-value <b id="v-ltv"></b></label><input type="range" id="s-ltv"></div>
+      <div class="sl"><label>Interest rate <b id="v-interest"></b></label><input type="range" id="s-interest"></div>
+    </div>
+    <div class="pfright">
+      <div class="kpis">
+        <div class="kpi hero"><span>NOI / yr</span><b id="k-noi">—</b></div>
+        <div class="kpi hero"><span>Value @ cap</span><b id="k-value">—</b></div>
+        <div class="kpi hero"><span>Yield on cost</span><b id="k-yield">—</b></div>
+        <div class="kpi"><span>Payback</span><b id="k-payback">—</b></div>
+        <div class="kpi"><span>Cash-on-cash</span><b id="k-coc">—</b></div>
+        <div class="kpi"><span>DSCR</span><b id="k-dscr">—</b></div>
+        <div class="kpi"><span>Eff. revenue</span><b id="k-rev">—</b></div>
+        <div class="kpi"><span>OpEx / yr</span><b id="k-opex">—</b></div>
+        <div class="kpi"><span>Dev cost</span><b id="k-devcost">—</b></div>
+        <div class="kpi"><span>Blended rate</span><b id="k-blended">—</b></div>
+        <div class="kpi"><span>Profit on sale</span><b id="k-profit">—</b></div>
+      </div>
+      <canvas id="pfchart"></canvas>
+      <div class="legend">
+        <span><i style="background:#8a93a0"></i>OpEx</span>
+        <span><i style="background:#e0a955"></i>Debt service</span>
+        <span><i style="background:#2f9e8f"></i>Cash flow</span>
+        <span style="margin-left:auto">5-year projection</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<nav id="bar" class="glass">
+  <div id="north" title="North">N</div>
+  <select id="presets" aria-label="Camera presets">
+    <option value="" disabled selected>Fly to…</option>
+    <option value="aerial">Aerial master plan</option>
+    <option value="entrance">Entrance</option>
+    <option value="waterfront">Waterfront row</option>
+    <option value="core">Resort core</option>
+    <option value="glamping">Glamping village</option>
+    <option value="dock">Coosaw dock</option>
+  </select>
+  <button id="pfbtn">▤ Pro Forma</button>
+  <button id="sumbtn">◎ Overview</button>
+  <div class="sp"></div>
+  <button id="briefbtn">⎙ Developer brief</button>
+</nav>
+
+<div id="attr">Imagery © Esri · Maxar · Earthstar Geographics — Parcel digitized from the survey plat (approximate) — Concept plan, not for construction</div>
+
+<div id="brief" class="off" role="dialog" aria-modal="true" aria-label="Developer brief">
+  <div id="briefcard" class="glass">
+    <div id="briefhdr">
+      <h2>Developer Brief — Coosaw Landing</h2>
+      <span>
+        <button id="printbtn">Print / PDF</button>
+        <button id="briefclose" aria-label="Close">✕</button>
+      </span>
+    </div>
+    <div id="briefbody"></div>
+  </div>
+</div>
+
+<div id="loading">
+  <img id="loadhero" src="assets/hero.jpg" alt="" onerror="this.style.display='none'">
+  <div class="box">
+    <h1>Coosaw <span>Landing</span></h1>
+    <div class="where">RV Resort &amp; Marina · Lady’s Island · Beaufort, South Carolina</div>
+    <div id="loadtrack"><div id="loadbar"></div></div>
+    <div id="loadmsg">Surveying the parcel…</div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

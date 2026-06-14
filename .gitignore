@@ -1,0 +1,8 @@
+.DS_Store
+*.log
+node_modules/
+.vscode/
+__pycache__/
+.env
+.env.local
+nanobanana-output/
