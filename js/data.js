@@ -9,7 +9,7 @@ export const SITE = {
   tagline: 'A wooded RV resort on Sea Island Parkway, Beaufort’s gateway to the beaches',
   address: '291 Sea Island Pkwy + adjacent tracts, Beaufort, SC 29907',
   county: 'Beaufort County · Lady’s Island, South Carolina',
-  lat: 32.4062, lon: -80.6306,
+  lat: 32.4052, lon: -80.6318,
   acres: 25,
   drive: {
     walmart: 'Walk to the Walmart Supercenter next door',
@@ -30,8 +30,8 @@ export const PCT = (n) => (n * 100).toFixed(n * 100 >= 100 ? 0 : 1) + '%';
 // The wooded block: Walmart + commercial to the W/NW, Airport Circle wrapping N/E,
 // Sea Island Pkwy (US-21) + marsh to the S.
 export const PARCEL = [
-  [-228, -120], [-235, 45], [-150, 140], [-5, 150], [150, 138],
-  [178, 30], [165, -108], [22, -138], [-122, -132],
+  [-212, -108], [-218, 42], [-135, 128], [10, 145], [158, 128],
+  [190, 28], [170, -105], [22, -135], [-118, -128],
 ];
 
 // No river frontage — the marsh is across US-21. No on-parcel open water.
@@ -56,28 +56,28 @@ function rowPads(ax, ay, bx, by, count, type, startId) {
   return out;
 }
 function glamping(startId) {
-  return rowPads(55, 130, 150, 130, 6, 'glamping', startId);
+  return rowPads(55, 108, 140, 108, 6, 'glamping', startId);
 }
 
 // "Optimized" — roomier layout (~77 sites), good flow.
 function layoutOptimized() {
   let id = 1; const pads = [];
   const rows = [
-    [-200, -110, 30, -110, 13, 'backin'],
-    [-200, -72, 30, -72, 13, 'backin'],
-    [-200, -32, 10, -32, 11, 'pullthru'],
-    [-200, 8, 10, 8, 11, 'pullthru'],
-    [-180, 48, -20, 48, 8, 'backin'],
-    [-160, 90, 0, 90, 8, 'backin'],
+    [-180, -105, 35, -105, 13, 'backin'],
+    [-180, -70, 35, -70, 13, 'backin'],
+    [-180, -32, 15, -32, 11, 'pullthru'],
+    [-180, 5, 15, 5, 11, 'pullthru'],
+    [-165, 42, -15, 42, 8, 'backin'],
+    [-150, 82, 0, 82, 7, 'backin'],
   ];
   for (const [ax, ay, bx, by, n, t] of rows) { pads.push(...rowPads(ax, ay, bx, by, n, t, id)); id += n; }
-  pads.push(...rowPads(150, -100, 150, 50, 7, 'premium', id)); id += 7;
+  pads.push(...rowPads(150, -95, 150, 45, 7, 'premium', id)); id += 7;
   pads.push(...glamping(id)); id += 6;
   const roads = [
-    [[-40, -148], [-40, -110], [-40, 95]],
-    [[-200, -91], [150, -91]],
-    [[-200, 28], [70, 28]],
-    [[150, -100], [150, 55]],
+    [[-30, -130], [-30, -105], [-30, 85]],
+    [[-180, -88], [150, -88]],
+    [[-180, 22], [60, 22]],
+    [[150, -95], [150, 50]],
   ];
   return { pads, roads };
 }
@@ -86,21 +86,21 @@ function layoutOptimized() {
 function layoutMax() {
   let id = 1; const pads = [];
   const rows = [
-    [-210, -118, 55, -118, 15, 'backin'],
-    [-210, -84, 55, -84, 15, 'backin'],
-    [-210, -50, 35, -50, 13, 'backin'],
-    [-210, -16, 35, -16, 13, 'pullthru'],
-    [-200, 20, 15, 20, 12, 'pullthru'],
-    [-180, 58, -10, 58, 9, 'backin'],
+    [-185, -105, 55, -105, 15, 'backin'],
+    [-185, -72, 55, -72, 15, 'backin'],
+    [-185, -40, 35, -40, 13, 'backin'],
+    [-185, -8, 35, -8, 13, 'pullthru'],
+    [-175, 26, 20, 26, 11, 'pullthru'],
+    [-160, 62, -5, 62, 9, 'backin'],
   ];
   for (const [ax, ay, bx, by, n, t] of rows) { pads.push(...rowPads(ax, ay, bx, by, n, t, id)); id += n; }
-  pads.push(...rowPads(158, -100, 158, 64, 8, 'premium', id)); id += 8;
+  pads.push(...rowPads(155, -95, 155, 55, 8, 'premium', id)); id += 8;
   pads.push(...glamping(id)); id += 6;
   const roads = [
-    [[-40, -148], [-40, -118], [-40, 62]],
-    [[-210, -67], [158, -67]],
-    [[-210, 2], [40, 2]],
-    [[158, -100], [158, 64]],
+    [[-30, -130], [-30, -105], [-30, 58]],
+    [[-185, -56], [155, -56]],
+    [[-185, 9], [40, 9]],
+    [[155, -95], [155, 55]],
   ];
   return { pads, roads };
 }
@@ -184,12 +184,12 @@ export const AMENITIES = {
 
 // area labels (local m)
 export const AREAS = [
-  { name: 'RESORT CORE', x: 60, y: 0 },
-  { name: 'GLAMPING', x: 95, y: 148 },
-  { name: 'AIRPORT CIRCLE', x: 330, y: 175 },
-  { name: 'SEA ISLAND PKWY · US-21', x: -40, y: -205 },
-  { name: 'WALMART', x: -470, y: 60 },
-  { name: 'MARSH', x: 170, y: -250 },
+  { name: 'RESORT CORE', x: 55, y: 5 },
+  { name: 'GLAMPING', x: 90, y: 126 },
+  { name: 'AIRPORT', x: -30, y: 215 },
+  { name: 'SEA ISLAND PKWY · US-21', x: -30, y: -180 },
+  { name: 'WALMART', x: -410, y: 70 },
+  { name: 'MARSH', x: 150, y: -210 },
 ];
 
 // ---------- financial model ----------
