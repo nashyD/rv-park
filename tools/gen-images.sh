@@ -13,7 +13,7 @@ export GEMINI_API_KEY="$KEY"
 
 mkdir -p assets
 OUT="nanobanana-output"
-STYLE="Lowcountry South Carolina coastal aesthetic, golden hour warm cinematic light, photorealistic editorial photography, live oaks with spanish moss and palmettos, tidal marsh and saltwater estuary, wide 16:9 landscape, no text, no watermark, no logos"
+STYLE="Lowcountry South Carolina coastal aesthetic, golden hour warm cinematic light, photorealistic editorial photography, live oaks with spanish moss and tall pines, wide 16:9 landscape, no text, no watermark, no logos"
 
 gen() {
   name="$1"; prompt="$2"
@@ -30,12 +30,12 @@ gen() {
 }
 
 # Hero first — if it fails twice, the quota is down; abort to avoid a long pointless run.
-gen "hero.jpg" "epic aerial drone photograph of a luxury waterfront RV resort on a marsh peninsula, neat curved rows of RVs and travel trailers, a wooden marina dock reaching into a tidal river, a clubhouse and pool, winding gravel roads"
+gen "hero.jpg" "epic aerial drone photograph of a wooded RV resort on a cleared coastal tract, neat rows of RVs and travel trailers among live oaks and pines, a clubhouse and pool, a small pond, winding gravel roads"
 if [ ! -f "assets/hero.jpg" ]; then echo "QUOTA DOWN — hero failed; aborting. Rerun this script after the Gemini quota resets."; exit 2; fi
 
-gen "clubhouse.jpg" "a coastal Lowcountry resort clubhouse building with a wraparound screened porch and standing-seam metal roof overlooking tidal marsh, rocking chairs"
-gen "pool.jpg"      "a resort saltwater swimming pool with sun deck, lounge chairs, shade cabanas and palmettos, tidal marsh in the background"
-gen "dock.jpg"      "a wooden floating boat dock and kayak launch on a calm tidal river, a small jon boat tied up, marsh grass and reflections"
+gen "clubhouse.jpg" "a coastal Lowcountry resort clubhouse building with a wraparound porch and standing-seam metal roof, rocking chairs, live oaks"
+gen "pool.jpg"      "a resort saltwater swimming pool with sun deck, lounge chairs, shade cabanas and palmettos"
+gen "pond.jpg"      "a stocked fishing pond with a small wooden pier and benches at an RV resort, pine trees, calm reflective water"
 gen "bathhouse.jpg" "a clean modern coastal bathhouse building with board-and-batten siding and a metal roof at an RV resort, landscaped walkway"
 gen "gatehouse.jpg" "a charming resort entrance gatehouse with a gate arm and a stacked-stone monument sign, grand live oaks draped in spanish moss"
 gen "store.jpg"     "a cozy camp store and front-desk office building at an RV resort with a covered porch, rocking chairs and string lights"
@@ -44,7 +44,7 @@ gen "dogpark.jpg"   "a fenced grassy off-leash dog park at an RV resort with agi
 gen "storage.jpg"   "a tidy fenced RV and boat storage yard with a maintenance barn at a resort, neat gravel lot"
 gen "backin.jpg"    "a back-in RV campsite with full hookups, a concrete pad, a picnic table and fire ring, a Class C motorhome parked, grassy site under live oaks"
 gen "pullthru.jpg"  "a spacious pull-through RV site with a large Class A diesel motorhome and a towed car, wide level gravel pad"
-gen "waterfront.jpg" "a premium waterfront RV campsite backing directly onto a tidal marsh and river, a large motorhome with a deck and chairs facing the water"
+gen "premium.jpg"   "an oversized premium RV patio site with a concrete patio, outdoor furniture and fire pit, a large motorhome, mature live oaks, extra space and privacy"
 gen "glamping.jpg"  "a glamping cabin and a safari tent with a wooden deck and string lights beside the water at dusk, cozy and inviting"
 
 echo "DONE. Generated assets:"; ls -1 assets

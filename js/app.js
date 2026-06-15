@@ -74,7 +74,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0c1a22);
 scene.fog = new THREE.Fog(0x0c1a22, 1400, 2600);
 const camera = new THREE.PerspectiveCamera(46, 2, 1, 8000);
-camera.position.set(120, 560, 720);
+camera.position.set(90, 470, 560);
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.domElement.id = 'labels';
 document.getElementById('stage').appendChild(labelRenderer.domElement);
@@ -190,7 +190,7 @@ function buildPads(pads) {
     if (pad.type === 'glamping') { rv = makeCabin(t.color); rv.position.y = 0.25; grp.add(rv); }
     else {
       const ped = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.1, 0.4), matL(0x3a4a44, 0.8)); ped.position.set(-t.len / 2 + 0.6, 0.7, t.wid / 2 - 0.5); grp.add(ped);
-      rv = makeRV(pad.type === 'waterfront' ? 0x2c8fb0 : 0x3f9c8c); rv.position.y = 0.25; grp.add(rv);
+      rv = makeRV(pad.type === 'premium' ? 0x2c8fb0 : 0x3f9c8c); rv.position.y = 0.25; grp.add(rv);
     }
     grp.position.set(pad.x, 0, -pad.y); grp.rotation.y = pad.rot;
     layers.pads.add(grp);
@@ -222,8 +222,11 @@ function buildAmenities() {
       const slab = new THREE.Mesh(new THREE.BoxGeometry(a.w, 0.2, a.h), matL(0x2f6f5e, 0.95)); slab.position.y = 0.15; grp.add(slab);
     } else if (name.startsWith('Dog Park')) {
       const slab = new THREE.Mesh(new THREE.BoxGeometry(a.w, 0.12, a.h), matL(0x6f8f3f, 1)); slab.position.y = 0.1; grp.add(slab);
-    } else if (name.startsWith('Boat Ramp')) {
-      buildDock(grp);
+    } else if (name.startsWith('Fishing Pond')) {
+      const r = Math.min(a.w, a.h) / 2;
+      const water = new THREE.Mesh(new THREE.CircleGeometry(r, 30), matL(0x2f6f86, 0.18, { metal: 0.35 }));
+      water.rotation.x = -Math.PI / 2; water.position.y = 0.18; water.scale.set(a.w / Math.min(a.w, a.h), 1, a.h / Math.min(a.w, a.h)); grp.add(water);
+      const pier = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.3, a.h * 0.4), matL(0x8a6a47, 0.85)); pier.position.set(a.w / 2 - 2, 0.4, 0); grp.add(pier);
     } else {
       const tall = /Clubhouse/.test(name) ? 6.5 : 4.2;
       const body = new THREE.Mesh(new THREE.BoxGeometry(a.w, tall, a.h), matL(cat.color, 0.62)); body.position.y = tall / 2; grp.add(body);
@@ -236,17 +239,6 @@ function buildAmenities() {
     layers.amen.add(grp);
   }
 }
-function buildDock(grp) {
-  const ramp = new THREE.Mesh(new THREE.BoxGeometry(6, 0.3, 8), matL(0x9a9a9a, 0.9)); ramp.position.y = 0.2; grp.add(ramp);
-  const pts = [[0, 0], [22, 28], [40, 52], [58, 70]];
-  for (const [dx, dy] of pts) {
-    const pile = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 3, 8), matL(0x6b513a, 0.9));
-    pile.position.set(dx, 0.5, -dy); grp.add(pile);
-  }
-  const deck = ribbon([[0, 2], [22, 28], [40, 52], [58, 72]], 3.2, 1.5, 0x8a6a47, { po: -3 }); grp.add(deck);
-  const float = new THREE.Mesh(new THREE.BoxGeometry(10, 0.4, 4), matL(0x7d5d40, 0.9)); float.position.set(58, 0.4, -72); grp.add(float);
-}
-
 // ---------- roads ----------
 function buildRoads(roads) {
   if (layers.roads) { group.remove(layers.roads); }
@@ -338,7 +330,7 @@ const cardImg = (src) => `<img class="card-img" src="${src}" alt="" loading="laz
 const AMEN_IMG = {
   'Gatehouse & Entry': 'gatehouse', 'Office & Camp Store': 'store', 'Clubhouse & Pavilion': 'clubhouse',
   'Resort Pool & Deck': 'pool', 'Bathhouse North': 'bathhouse', 'Bathhouse South': 'bathhouse',
-  'Boat Ramp & Dock': 'dock', 'Pickleball & Courts': 'pickleball', 'Dog Park': 'dogpark', 'Maintenance & Storage': 'storage',
+  'Fishing Pond': 'pond', 'Pickleball & Courts': 'pickleball', 'Dog Park': 'dogpark', 'Maintenance & Storage': 'storage',
 };
 function showOverview() {
   highlightType(null);
@@ -377,9 +369,9 @@ function showPad(pad) {
 }
 function padWhy(type) {
   return ({
-    backin: 'The bread-and-butter inventory on the upland core — full 30/50-amp hookups, the lowest build cost, and the easiest sites to fill year-round.',
+    backin: 'The bread-and-butter inventory — full 30/50-amp hookups, the lowest build cost, and the easiest sites to fill year-round.',
     pullthru: 'Big-rig pull-throughs for Class-A coaches and trailers that never unhitch — a premium a meaningful share of travelers will pay up for.',
-    waterfront: 'The headline product: sites backing the tidal marsh and Coosaw with the best light and the dock steps away. Highest rate, highest margin.',
+    premium: 'Oversized patio sites on the quiet marsh-side edge by the pond — concrete patio, extra buffer, the best light. Highest rate, highest margin.',
     glamping: 'Cabins capture the no-RV traveler at a hotel-like rate, lift shoulder-season occupancy, and photograph well for marketing.',
   })[type] || '';
 }
@@ -442,12 +434,12 @@ function flyTo(x, y, dist = 240, dur = 850) {
   tween = { t0: performance.now(), dur, p0: camera.position.clone(), p1: pos, c0: controls.target.clone(), c1: target };
 }
 const PRESETS = {
-  aerial: () => { tween = { t0: performance.now(), dur: 1000, p0: camera.position.clone(), p1: new THREE.Vector3(120, 560, 720), c0: controls.target.clone(), c1: new THREE.Vector3(0, 0, -30) }; },
-  entrance: () => flyTo(-250, -50, 150),
-  waterfront: () => flyTo(10, 150, 180),
-  core: () => flyTo(120, -55, 160),
-  glamping: () => flyTo(150, 110, 130),
-  dock: () => flyTo(190, 150, 150),
+  aerial: () => { tween = { t0: performance.now(), dur: 1000, p0: camera.position.clone(), p1: new THREE.Vector3(90, 470, 560), c0: controls.target.clone(), c1: new THREE.Vector3(0, 0, -20) }; },
+  entrance: () => flyTo(-40, -135, 150),
+  core: () => flyTo(60, 0, 165),
+  premium: () => flyTo(150, -20, 150),
+  glamping: () => flyTo(115, 128, 120),
+  pond: () => flyTo(175, -55, 140),
 };
 
 // ---------- picking ----------
@@ -585,7 +577,7 @@ addEventListener('resize', resize);
 const computedAcres = polyArea(PARCEL) / 4046.8564;
 resize(); buildList(); wireUI(); bindSliders(); animate();
 buildWater(); buildParcel(); buildAmenities(); buildLabels(); buildSurveyOverlay();
-setLayout('sketch'); buildTrees();
+setLayout('optimized'); buildTrees();
 document.querySelectorAll('[data-scen]').forEach(b => b.classList.toggle('on', b.dataset.scen === 'base'));
 buildGround().then(() => { loadTick(1); setTimeout(() => loadEl.classList.add('off'), 300); })
   .catch(err => { loadMsg.textContent = 'Imagery fetch failed — check your connection. (' + err.message + ')'; loadBar.style.background = '#d96459'; });
