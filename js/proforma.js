@@ -1,4 +1,4 @@
-// Coosaw Landing — interactive pro forma.
+// Sea Island RV Resort — interactive pro forma.
 // compute() turns the slider inputs + the current pad mix into a full set of KPIs.
 // drawChart() renders a 5-year revenue / cash-flow chart on a <canvas>.
 import { PAD_TYPES } from './data.js';

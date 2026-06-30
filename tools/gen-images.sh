@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# Generate all Coosaw Landing imagery via the Gemini API (nanobanana extension).
-# Reads GEMINI_API_KEY from ~/Documents/frontier/.env. Re-runnable: skips images
-# that already exist, so you can rerun after a quota reset to fill in the gaps.
+# Generate all Sea Island RV Resort imagery via the Gemini CLI (nanobanana extension).
+# Needs the `gemini` CLI + nanobanana extension. Re-runnable: skips images that
+# already exist, so you can rerun after a quota reset to fill in the gaps.
+#
+# No Node/gemini CLI? Use tools/gen-images.py instead — same Gemini image API,
+# only python3 + a key required.
 set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1
 
-KEY=$(grep -E '^GEMINI_API_KEY=' "$HOME/Documents/frontier/.env" | head -1 | cut -d= -f2-)
-KEY=${KEY%\"}; KEY=${KEY#\"}
-export GEMINI_API_KEY="$KEY"
-[ -z "$GEMINI_API_KEY" ] && { echo "no GEMINI_API_KEY found"; exit 1; }
+if [ -z "${GEMINI_API_KEY:-}" ]; then
+  for f in "$ROOT/.env" "$HOME/.gemini/.env" "$HOME/.env"; do
+    [ -f "$f" ] && { KEY=$(grep -E '^GEMINI_API_KEY=' "$f" | head -1 | cut -d= -f2-); break; }
+  done
+  KEY=${KEY:-}; KEY=${KEY%\"}; KEY=${KEY#\"}; export GEMINI_API_KEY="$KEY"
+fi
+[ -z "${GEMINI_API_KEY:-}" ] && { echo "no GEMINI_API_KEY found (env or .env)"; exit 1; }
 
 mkdir -p assets
 OUT="nanobanana-output"

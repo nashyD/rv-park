@@ -14,11 +14,11 @@ interactive pro forma with scenario sliders.
 No build step. Serve the folder with any static server:
 
 ```
-cd coosaw-rv-resort
+cd rv-park
 python3 -m http.server 5311
 ```
 
-Then open <http://localhost:5311>. (VS Code: the `coosaw-rv` launch config does the same.)
+Then open <http://localhost:5311>. (VS Code: the `rv-park` launch config does the same.)
 
 Needs an internet connection on first load — it pulls Esri World Imagery map tiles
 at runtime and stitches them into the ground texture.

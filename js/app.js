@@ -1,16 +1,16 @@
-// Coosaw Landing — interactive 3D RV-resort master plan.
-// Real Esri World Imagery draped over the parcel; pads/amenities/dock in 3D;
+// Sea Island RV Resort — interactive 3D RV-resort master plan.
+// Real Esri World Imagery draped over the parcel; pads/amenities in 3D;
 // every interaction feeds the live pro forma. Flat Lowcountry datum: 1 unit = 1 m.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { SITE, PARCEL, WATER, PAD_TYPES, LAYOUTS, AMENITIES, CATS, AREAS, FINANCE, FEASIBILITY, M, D0, PCT } from './data.js';
+import { SITE, SITE_ROT, PARCEL, WATER, PAD_TYPES, LAYOUTS, AMENITIES, CATS, AREAS, FINANCE, FEASIBILITY, M, D0, PCT } from './data.js';
 import { compute, drawChart } from './proforma.js';
 
 // ---------- geo / projection ----------
 const CLAT = SITE.lat, CLON = SITE.lon;
 const MLAT = 110574, MLON = 111320 * Math.cos(CLAT * Math.PI / 180);
-const EXT = { x0: -600, x1: 600, y0: -600, y1: 600 };
+const EXT = { x0: -760, x1: 760, y0: -760, y1: 760 };
 const ll2xy = (lat, lon) => [(lon - CLON) * MLON, (lat - CLAT) * MLAT];
 const xy2ll = (x, y) => [CLAT + y / MLAT, CLON + x / MLON];
 const R = 6378137;
@@ -122,7 +122,7 @@ function ribbon(pts, width, lift, color, opts = {}) {
 const layers = {}; // toggleable groups
 async function buildGround() {
   loadStage('Draping Esri satellite imagery over the parcel…');
-  const icv = await stitch(18, (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`, 2800);
+  const icv = await stitch(18, (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`, 3400);
   const tex = new THREE.CanvasTexture(icv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -234,7 +234,7 @@ function buildAmenities() {
       roof.position.y = tall + 1.0; roof.rotation.y = Math.PI / 4;
       roof.scale.set(a.w / Math.hypot(a.w, a.h) * 1.45, 1, a.h / Math.hypot(a.w, a.h) * 1.45); grp.add(roof);
     }
-    grp.position.set(a.x, 0, -a.y);
+    grp.position.set(a.x, 0, -a.y); grp.rotation.y = SITE_ROT;
     grp.traverse(o => { if (o.isMesh) { o.userData = { kind: 'amenity', name }; pickables.push(o); } });
     layers.amen.add(grp);
   }
@@ -491,9 +491,10 @@ function applyScenario(name) {
 
 // ---------- developer brief ----------
 function buildBrief() {
+  document.getElementById('brieftitle').textContent = 'Developer Brief — ' + SITE.name;
   const remaining = Math.max(0, model.devCost - inp.landCost);
   const sumW = FINANCE.capexWeights.reduce((s, [, w]) => s + w, 0);
-  const cap = [['Land (38.56 ac, waterfront upland)', inp.landCost],
+  const cap = [['Land (~' + computedAcres.toFixed(0) + ' ac assemblage)', inp.landCost],
     ...FINANCE.capexWeights.map(([k, w]) => [k, remaining * w / sumW])]
     .map(([k, v]) => fmtRow(k, M(v))).join('');
   const amen = Object.entries(AMENITIES).map(([name, a]) => `<tr><td>${name}</td><td>${CATS[a.cat].label}</td><td>${M(a.capex)}</td><td>P${a.phase}</td><td>${a.revenue}</td></tr>`).join('');
@@ -536,6 +537,10 @@ function wireUI() {
   const pf = document.getElementById('pf');
   document.getElementById('pfbtn').addEventListener('click', () => { pf.classList.toggle('open'); drawPF(); });
   document.getElementById('pfclose').addEventListener('click', () => pf.classList.remove('open'));
+  const left = document.getElementById('left'), scrim = document.getElementById('scrim');
+  const closeLeft = () => { left.classList.remove('open'); scrim.classList.remove('open'); };
+  document.getElementById('layersbtn').addEventListener('click', () => { const on = !left.classList.contains('open'); left.classList.toggle('open', on); scrim.classList.toggle('open', on); });
+  scrim.addEventListener('click', closeLeft);
   document.getElementById('briefbtn').addEventListener('click', () => { buildBrief(); document.getElementById('brief').classList.remove('off'); });
   document.getElementById('briefclose').addEventListener('click', () => document.getElementById('brief').classList.add('off'));
   document.getElementById('brief').addEventListener('click', e => { if (e.target.id === 'brief') document.getElementById('brief').classList.add('off'); });
