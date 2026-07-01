@@ -80,37 +80,49 @@ const inMargin = (x, y, m) => pip(x, y, PARCEL) && edgeDist(x, y, PARCEL) >= m;
 // ---------- parametric layout ----------
 // Fill the real parcel with rows along its long axis, every pad set back `margin` m
 // from each property line so nothing touches the roads. Re-snaps to any PARCEL edit.
+const CROSS = 132, AISLE = 9; // cross drive-aisle period + half-width (m)
 function fillLayout(rowGap, padGap, margin) {
   let minu = 1e9, maxu = -1e9, minv = 1e9, maxv = -1e9;
   for (const [x, y] of PARCEL) { const [u, v] = unrot(x, y); if (u < minu) minu = u; if (u > maxu) maxu = u; if (v < minv) minv = v; if (v > maxv) maxv = v; }
+  const inAisle = (u) => { const p = ((u - minu) % CROSS + CROSS) % CROSS; return Math.abs(p - CROSS / 2) < AISLE; };
   const rows = [];
   for (let v = minv + rowGap / 2; v <= maxv; v += rowGap) {
     let start = null, prev = null;
     for (let u = minu; u <= maxu + 2; u += 2) {
       const [wx, wy] = rot(u, v); const ok = u <= maxu && inMargin(wx, wy, margin);
       if (ok && start === null) start = u;
-      if (!ok && start !== null) { if (prev - start >= padGap * 0.6) rows.push([start, prev, v]); start = null; }
+      if (!ok && start !== null) { if (prev - start >= padGap) rows.push([start, prev, v]); start = null; }
       if (ok) prev = u;
     }
   }
+  // rows nearest the quiet NE end (max v) become premium then glamping
+  rows.sort((a, b) => a[2] - b[2]);
   const pads = []; let id = 1; const nr = rows.length;
   rows.forEach((r, ri) => {
     const [ua, ub, v] = r;
     let type = ri % 3 === 1 ? 'pullthru' : 'backin', cap = 0;
     if (ri === nr - 1) { type = 'glamping'; cap = 6; }
     else if (ri === nr - 2) type = 'premium';
-    let n = Math.max(1, Math.round((ub - ua) / padGap) + 1); if (cap) n = Math.min(n, cap);
-    for (let i = 0; i < n; i++) { const t = n === 1 ? 0.5 : i / (n - 1); const [x, y] = rot(ua + (ub - ua) * t, v); pads.push({ id: id++, type, x, y, rot: SITE_ROT + Math.PI / 2 }); }
+    const n = Math.max(1, Math.round((ub - ua) / padGap)); let placed = 0;
+    for (let i = 0; i <= n; i++) {
+      const u = ua + (ub - ua) * (n === 0 ? 0.5 : i / n);
+      if (inAisle(u)) continue;
+      const [x, y] = rot(u, v); pads.push({ id: id++, type, x, y, rot: SITE_ROT + Math.PI / 2 });
+      if (cap && ++placed >= cap) break;
+    }
   });
-  // spine road down the band centreline, clipped to inside
-  const midv = (minv + maxv) / 2, spine = [];
-  for (let u = minu; u <= maxu; u += 8) { const p = rot(u, midv); if (inMargin(p[0], p[1], margin * 0.5)) spine.push(p); }
-  return { pads, roads: spine.length > 1 ? [spine] : [] };
+  // roads: centre spine along the band + aligned cross drive-aisles
+  const midv = (minv + maxv) / 2, roads = [];
+  const clip = (au, av, bu, bv) => { const pts = []; const steps = Math.max(2, Math.hypot(bu - au, bv - av) / 8);
+    for (let i = 0; i <= steps; i++) { const t = i / steps, p = rot(au + (bu - au) * t, av + (bv - av) * t); if (inMargin(p[0], p[1], margin * 0.5)) pts.push(p); } return pts; };
+  const spine = clip(minu, midv, maxu, midv); if (spine.length > 1) roads.push(spine);
+  for (let uc = minu + CROSS / 2; uc < maxu; uc += CROSS) { const seg = clip(uc, minv, uc, maxv); if (seg.length > 1) roads.push(seg); }
+  return { pads, roads };
 }
 
 export const LAYOUTS = {
-  optimized: { label: 'Optimized', build: () => fillLayout(40, 11, 26) },
-  max: { label: 'Max density', build: () => fillLayout(34, 10.5, 24) },
+  optimized: { label: 'Optimized', build: () => fillLayout(42, 11, 26) },
+  max: { label: 'Max density', build: () => fillLayout(34, 9.5, 24) },
 };
 
 // ---------- amenities (clickable, with ROI) ----------
@@ -189,11 +201,11 @@ export const AMENITIES = {
 // rotated into world meters so they line up with the tilted resort.
 // design-frame (long axis = u), rotated into world; nudged to sit in the parcel
 const AMEN_POS = {
-  'Gatehouse & Entry': [-235, 6], 'Office & Camp Store': [-188, 0],
+  'Gatehouse & Entry': [-120, -32], 'Office & Camp Store': [-78, -32],
   'Clubhouse & Pavilion': [8, 6], 'Resort Pool & Deck': [8, -34],
-  'Bathhouse North': [120, 18], 'Bathhouse South': [-110, -18],
+  'Bathhouse North': [120, 18], 'Bathhouse South': [-52, -24],
   'Pickleball & Courts': [188, 8], 'Dog Park': [62, 34],
-  'Fishing Pond': [232, -6], 'Maintenance & Storage': [-250, 22],
+  'Fishing Pond': [232, -6], 'Maintenance & Storage': [-138, -42],
 };
 for (const [name, a] of Object.entries(AMENITIES)) {
   const d = AMEN_POS[name]; if (d) { const [wx, wy] = rot(d[0], d[1]); a.x = wx; a.y = wy; }

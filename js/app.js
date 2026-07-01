@@ -2,7 +2,9 @@
 // Real Esri World Imagery draped over the parcel; pads/amenities in 3D;
 // every interaction feeds the live pro forma. Flat Lowcountry datum: 1 unit = 1 m.
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { MapControls } from 'three/addons/controls/MapControls.js';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { Sky } from 'three/addons/objects/Sky.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { SITE, SITE_ROT, PARCEL, WATER, PAD_TYPES, LAYOUTS, AMENITIES, CATS, AREAS, FINANCE, FEASIBILITY, M, D0, PCT } from './data.js';
 import { compute, drawChart } from './proforma.js';
@@ -70,23 +72,56 @@ const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0c1a22);
-scene.fog = new THREE.Fog(0x0c1a22, 1400, 2600);
-const camera = new THREE.PerspectiveCamera(46, 2, 1, 8000);
+scene.fog = new THREE.Fog(0xd3c8b4, 2300, 3900);
+const camera = new THREE.PerspectiveCamera(46, 2, 1, 14000);
 camera.position.set(90, 470, 560);
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.domElement.id = 'labels';
 document.getElementById('stage').appendChild(labelRenderer.domElement);
-const controls = new OrbitControls(camera, canvas);
+const controls = new MapControls(camera, canvas);
 controls.target.set(0, 0, -30);
-controls.enableDamping = true; controls.dampingFactor = 0.07;
-controls.maxPolarAngle = Math.PI * 0.485; controls.minDistance = 40; controls.maxDistance = 2200;
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.49; controls.minDistance = 12; controls.maxDistance = 2400;
+controls.screenSpacePanning = false; controls.zoomToCursor = true;
 
-scene.add(new THREE.AmbientLight(0xcfe0ea, 0.7));
-const sun = new THREE.DirectionalLight(0xfff2d8, 2.0);
-sun.position.set(-700, 900, 500); scene.add(sun);
-scene.add(new THREE.HemisphereLight(0xa9cfe0, 0x33402c, 0.55));
+// ---------- sky, sun & image-based lighting ----------
+const sky = new Sky(); sky.scale.setScalar(12000); scene.add(sky);
+{
+  const u = sky.material.uniforms;
+  u.turbidity.value = 8; u.rayleigh.value = 2.2;
+  u.mieCoefficient.value = 0.005; u.mieDirectionalG.value = 0.86;
+  u.sunPosition.value.setFromSphericalCoords(1, THREE.MathUtils.degToRad(90 - 26), THREE.MathUtils.degToRad(-120));
+}
+const sunDir = sky.material.uniforms.sunPosition.value.clone();
+const sun = new THREE.DirectionalLight(0xffe0ad, 3.2);
+sun.position.copy(sunDir).multiplyScalar(2200);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 300; sun.shadow.camera.far = 5200;
+sun.shadow.camera.left = -470; sun.shadow.camera.right = 470;
+sun.shadow.camera.top = 470; sun.shadow.camera.bottom = -470;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 1.5;
+scene.add(sun);
+scene.add(new THREE.AmbientLight(0xbcd2e8, 0.17));
+scene.add(new THREE.HemisphereLight(0xc2d6ea, 0x3a3324, 0.30));
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(sky).texture;
+pmrem.dispose();
+
+// meshes cast/receive sun shadows (ground receives only; transparent skips casting)
+function updateShadowFlags() {
+  group.traverse(o => {
+    if (!o.isMesh) return;
+    if (o.name === 'ground') { o.receiveShadow = true; o.castShadow = false; }
+    else if (o.material && o.material.transparent) { o.castShadow = false; o.receiveShadow = true; }
+    else { o.castShadow = true; o.receiveShadow = true; }
+  });
+}
 
 const group = new THREE.Group(); scene.add(group);
 const pickables = [];
@@ -129,7 +164,7 @@ async function buildGround() {
   const geo = new THREE.PlaneGeometry(EXT.x1 - EXT.x0, EXT.y1 - EXT.y0); geo.rotateX(-Math.PI / 2);
   const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.97 }));
   ground.position.set((EXT.x0 + EXT.x1) / 2, 0, -(EXT.y0 + EXT.y1) / 2);
-  ground.name = 'ground'; group.add(ground);
+  ground.name = 'ground'; ground.receiveShadow = true; group.add(ground);
 }
 const waterMeshes = [];
 function buildWater() {
@@ -175,7 +210,7 @@ function makeCabin(color) {
 // ---------- pads ----------
 let padObjs = [];      // { pad, group, rv }
 let currentPads = [];
-function clearGroup(g) { while (g.children.length) { const c = g.children.pop(); c.traverse?.(o => { o.geometry?.dispose?.(); }); } }
+function clearGroup(g) { while (g.children.length) { const c = g.children.pop(); c.traverse?.(o => { o.geometry?.dispose?.(); o.material?.dispose?.(); }); } }
 function buildPads(pads) {
   if (!layers.pads) { layers.pads = new THREE.Group(); group.add(layers.pads); }
   // remove old pad pickables
@@ -421,6 +456,7 @@ function setLayout(key) {
   layoutKey = key;
   const { pads, roads } = LAYOUTS[key].build();
   buildPads(pads); buildRoads(roads); refreshCounts(); recompute(); showOverview();
+  updateShadowFlags();
   document.querySelectorAll('[data-layout]').forEach(b => b.classList.toggle('on', b.dataset.layout === key));
 }
 
@@ -458,12 +494,78 @@ canvas.addEventListener('click', () => {
   else if (u.kind === 'amenity') showAmenity(u.name);
 });
 function hoverTick() {
+  if (walkMode) { canvas.style.cursor = 'none'; return; }
   ray.setFromCamera(ptr, camera);
   const hits = ray.intersectObjects(pickables, false);
   const o = hits.length ? hits[0].object : null;
   if (hovered && hovered !== o && hovered.userData.kind !== 'pad') hovered.material.emissive?.setHex(0x000000);
   canvas.style.cursor = o ? 'pointer' : 'grab';
   hovered = o;
+}
+
+// ---------- navigation: recenter, roam, first-person walk ----------
+// Double-click any ground point to pivot + zoom there (no more single fixed pivot).
+canvas.addEventListener('dblclick', e => {
+  if (walkMode) return;
+  const r = canvas.getBoundingClientRect();
+  ptr.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const g = group.getObjectByName('ground');
+  const hits = g ? ray.intersectObject(g, false) : [];
+  if (hits.length) flyTo(hits[0].point.x, -hits[0].point.z, Math.max(70, camera.position.distanceTo(controls.target) * 0.55));
+});
+// WASD / arrows roam the site (and drive first-person walk)
+const keys = { f: 0, s: 0 };
+function roamKey(e, v) {
+  const tag = (document.activeElement || {}).tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  const k = e.key.toLowerCase();
+  if (k === 'w' || e.key === 'ArrowUp') keys.f = v;
+  else if (k === 's' || e.key === 'ArrowDown') keys.f = -v;
+  else if (k === 'a' || e.key === 'ArrowLeft') keys.s = -v;
+  else if (k === 'd' || e.key === 'ArrowRight') keys.s = v;
+  else return;
+  e.preventDefault();
+}
+addEventListener('keydown', e => roamKey(e, 1));
+addEventListener('keyup', e => roamKey(e, 0));
+addEventListener('blur', () => { keys.f = keys.s = 0; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) keys.f = keys.s = 0; });
+// Escape closes open panels / exits walk
+addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (walkMode) return; // PointerLockControls handles its own Escape
+  document.getElementById('brief').classList.add('off');
+  document.getElementById('pf').classList.remove('open');
+  document.getElementById('left').classList.remove('open');
+  document.getElementById('scrim').classList.remove('open');
+});
+
+const walk = new PointerLockControls(camera, canvas);
+let walkMode = false;
+function setWalk(on) {
+  if (on) { tween = null; const t = controls.target; camera.position.set(t.x, 2.0, t.z + 22); controls.enabled = false; walk.lock(); }
+  else walk.unlock();
+}
+walk.addEventListener('lock', () => { walkMode = true; document.getElementById('walkbtn')?.classList.add('on'); document.getElementById('walkhint')?.classList.add('show'); });
+walk.addEventListener('unlock', () => {
+  if (!walkMode) return;
+  walkMode = false; controls.enabled = true;
+  const d = new THREE.Vector3(); camera.getWorldDirection(d); d.y = 0; d.normalize();
+  controls.target.copy(camera.position).addScaledVector(d, 45);
+  document.getElementById('walkbtn')?.classList.remove('on'); document.getElementById('walkhint')?.classList.remove('show');
+});
+function applyMovement() {
+  if (!keys.f && !keys.s) return;
+  if (walkMode && walk.isLocked) {
+    walk.moveForward(keys.f * 0.9); walk.moveRight(keys.s * 0.9); camera.position.y = 2.0;
+  } else if (!walkMode) {
+    const spd = Math.max(2, camera.position.y * 0.02);
+    const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.y = 0; dir.normalize();
+    const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+    const mv = dir.multiplyScalar(keys.f * spd).add(right.multiplyScalar(keys.s * spd));
+    camera.position.add(mv); controls.target.add(mv);
+  }
 }
 
 // ---------- pro forma dashboard wiring ----------
@@ -534,6 +636,7 @@ function wireUI() {
   });
   document.getElementById('presets').addEventListener('change', e => { PRESETS[e.target.value]?.(); e.target.selectedIndex = 0; e.target.blur(); });
   document.getElementById('sumbtn').addEventListener('click', () => { showOverview(); PRESETS.aerial(); });
+  document.getElementById('walkbtn').addEventListener('click', () => { if (walkMode) setWalk(false); else setWalk(true); });
   const pf = document.getElementById('pf');
   document.getElementById('pfbtn').addEventListener('click', () => { pf.classList.toggle('open'); drawPF(); });
   document.getElementById('pfclose').addEventListener('click', () => pf.classList.remove('open'));
@@ -550,8 +653,12 @@ function wireUI() {
 // ---------- render loop ----------
 const north = document.getElementById('north');
 const clock = new THREE.Clock(); let frame = 0;
+let running = true;
+canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); running = false; });
+canvas.addEventListener('webglcontextrestored', () => { running = true; });
 function animate() {
   requestAnimationFrame(animate);
+  if (!running) return;
   const t = clock.getElapsedTime();
   if (tween) {
     const k = tween.dur ? Math.min(1, (performance.now() - tween.t0) / tween.dur) : 1;
@@ -560,7 +667,8 @@ function animate() {
     if (k >= 1) tween = null;
   }
   for (const w of waterMeshes) w.material.opacity = 0.5 + 0.06 * Math.sin(t * 0.8);
-  controls.update();
+  applyMovement();
+  if (!walkMode) controls.update();
   if ((frame++ & 3) === 0) hoverTick();
   if ((frame & 15) === 0) {
     const d = camera.position.distanceTo(controls.target);
@@ -582,7 +690,7 @@ addEventListener('resize', resize);
 const computedAcres = polyArea(PARCEL) / 4046.8564;
 resize(); buildList(); wireUI(); bindSliders(); animate();
 buildWater(); buildParcel(); buildAmenities(); buildLabels(); buildSurveyOverlay();
-setLayout('optimized'); buildTrees();
+setLayout('optimized'); buildTrees(); updateShadowFlags();
 document.querySelectorAll('[data-scen]').forEach(b => b.classList.toggle('on', b.dataset.scen === 'base'));
 buildGround().then(() => { loadTick(1); setTimeout(() => loadEl.classList.add('off'), 300); })
   .catch(err => { loadMsg.textContent = 'Imagery fetch failed — check your connection. (' + err.message + ')'; loadBar.style.background = '#d96459'; });

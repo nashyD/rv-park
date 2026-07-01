@@ -4,6 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sea Island RV Resort — Master Plan</title>
+<meta name="description" content="Interactive 3D master plan and live investor pro forma for a ~25-acre RV resort assemblage on Sea Island Parkway (US-21), Beaufort, SC.">
+<link rel="canonical" href="https://nashyd.github.io/rv-park/">
+<meta name="theme-color" content="#0a1519">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nashyd.github.io/rv-park/">
+<meta property="og:title" content="Sea Island RV Resort — 3D Master Plan">
+<meta property="og:description" content="Interactive 3D site plan + investor pro forma for a ~25-acre RV resort on Sea Island Pkwy, Beaufort SC.">
+<meta property="og:image" content="https://nashyd.github.io/rv-park/assets/hero.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sea Island RV Resort — 3D Master Plan">
+<meta name="twitter:description" content="Interactive 3D site plan + investor pro forma for a ~25-acre RV resort on Sea Island Pkwy, Beaufort SC.">
+<meta name="twitter:image" content="https://nashyd.github.io/rv-park/assets/hero.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -131,6 +143,11 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
 #loadbar{height:100%;width:0%;background:var(--gold);transition:width .25s}
 #loadmsg{margin-top:12px;font:500 12px 'JetBrains Mono';color:var(--dim)}
 #attr{position:fixed;right:16px;bottom:108px;z-index:8;font-size:9.5px;color:rgba(233,239,233,.34);text-align:right;pointer-events:none;max-width:300px}
+#walkhint{position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:30;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:9px 16px;font-size:12.5px;color:var(--text);opacity:0;pointer-events:none;transition:opacity .22s,transform .22s;box-shadow:var(--shadow);white-space:nowrap}
+#walkhint.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#walkhint b{color:var(--gold)}
+#walkbtn.on{background:rgba(230,196,91,.16);border-color:var(--gold);color:var(--gold)}
+@media (pointer:coarse){#walkbtn{display:none}}
 
 .card-img{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid var(--line2);margin:2px 0 8px;display:block}
 .brief-hero{width:100%;height:150px;object-fit:cover;border-radius:10px;border:1px solid var(--line2);margin-bottom:12px;display:block}
@@ -257,13 +274,16 @@ input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;bac
     <option value="glamping">Glamping</option>
     <option value="pond">Fishing pond</option>
   </select>
+  <button id="walkbtn" title="First-person walk — WASD + mouse, Esc to exit">🚶 Walk</button>
   <button id="pfbtn">▤ Pro Forma</button>
   <button id="sumbtn">◎ Overview</button>
   <div class="sp"></div>
   <button id="briefbtn">⎙ Developer brief</button>
 </nav>
 
-<div id="attr">Imagery © Esri · Maxar · Earthstar Geographics — Parcel digitized from the survey plat (approximate) — Concept plan, not for construction</div>
+<div id="walkhint"><b>Walk mode</b> · move <b>W A S D</b> · look with the mouse · <b>Esc</b> to exit</div>
+
+<div id="attr">Imagery © Esri · Maxar · Earthstar Geographics — Parcel snapped to Beaufort County GIS (assemblage) — Concept plan, not for construction</div>
 
 <div id="brief" class="off" role="dialog" aria-modal="true" aria-label="Developer brief">
   <div id="briefcard" class="glass">
