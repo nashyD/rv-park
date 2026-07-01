@@ -9,7 +9,7 @@ export const SITE = {
   tagline: 'A wooded RV resort on Sea Island Parkway, Beaufort’s gateway to the beaches',
   address: '291 Sea Island Pkwy + adjacent tracts, Beaufort, SC 29907',
   county: 'Beaufort County · Lady’s Island, South Carolina',
-  lat: 32.40708, lon: -80.63071,
+  lat: 32.40706, lon: -80.63064,
   acres: 25,
   drive: {
     walmart: 'Walk to the Walmart Supercenter next door',
@@ -26,15 +26,16 @@ export const M = (n) => '$' + (n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 1 : 2) + 
 export const D0 = (n) => '$' + Math.round(n).toLocaleString();
 export const PCT = (n) => (n * 100).toFixed(n * 100 >= 100 ? 0 : 1) + '%';
 
-// ---------- parcel boundary (local meters, ~25 ac) ----------
-// The wooded block: Walmart + commercial to the W/NW, Airport Circle wrapping N/E,
-// Sea Island Pkwy (US-21) + marsh to the S.
-// Digitized over Esri imagery against geocoded anchors (Walmart bldg, 291 Sea
-// Island frontage, ARW airport). Centroid ≈ origin so the layout sits inside it.
-// The ~25-ac strip between Taylor Dr (W) and Airport Cir (E), fronting US-21 (S),
-// digitized from the owner's outline over Esri imagery + geocoded road anchors.
+// ---------- parcel boundary (local meters) ----------
+// The real ~25.4-ac assemblage, unioned from Beaufort County GIS (EnerGov parcel
+// layer), anchored on 291 Sea Island Pkwy. PINs R200-018: 0060 (291 Sea Island,
+// Atkins) · 0064 (307 Sea Island, Drive N Range) · 0062 (64 Airport Cir, Glover)
+// · 062A + 0264 (rear, Drive N Range). Centroid at origin. 1 unit = 1 m.
 export const PARCEL = [
-  [-120, -221], [100, -236], [105, 224], [-85, 234],
+  [-32.6, -219.5], [-72.3, -286.3], [-130.8, -251.8], [-21.9, -68.4], [-80.3, -33.9],
+  [-189.2, -217.4], [-259.8, -175.8], [-77.4, 120.9], [-11.5, 81.9], [114.6, 294.4],
+  [146.4, 277.7], [130.2, 250.1], [158.4, 235.2], [174.8, 262.7], [235.0, 231.1],
+  [126.0, 47.6], [152.4, 32.5], [-6.6, -235.2],
 ];
 
 // No river frontage — the marsh is across US-21. No on-parcel open water.
@@ -48,83 +49,68 @@ export const PAD_TYPES = {
   glamping: { label: 'Glamping cabin', rate: 129, len: 8, wid: 6, color: 0xd9a05a, siteCapex: 60000 },
 };
 
-// ---------- site rotation ----------
-// The parcel runs NE–SW, so the whole resort is designed in a straight "design
-// frame" (X = the long axis, Y = the short axis) and rotated into world meters.
-export const SITE_ROT = 0; // the strip runs ~N–S; rows are E–W (no rotation)
+// ---------- site orientation ----------
+// Long axis of the real parcel band (Beaufort County GIS minimum rotated rectangle).
+export const SITE_ROT = 1.035; // rad ≈ 59.3°
 const _rc = Math.cos(SITE_ROT), _rs = Math.sin(SITE_ROT);
-export const rot = (x, y) => [x * _rc - y * _rs, x * _rs + y * _rc];
+export const rot = (x, y) => [x * _rc - y * _rs, x * _rs + y * _rc];  // design → world
+const unrot = (x, y) => [x * _rc + y * _rs, -x * _rs + y * _rc];      // world → design
 
-// ---------- pad-layout generators ----------
-function rowPads(ax, ay, bx, by, count, type, startId) {
-  const out = [];
-  const ang = Math.atan2(by - ay, bx - ax) + Math.PI / 2;
-  for (let i = 0; i < count; i++) {
-    const t = count === 1 ? 0.5 : i / (count - 1);
-    out.push({ id: startId + i, type, x: ax + (bx - ax) * t, y: ay + (by - ay) * t, rot: ang });
+// ---------- geometry helpers ----------
+function pip(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
   }
-  return out;
+  return inside;
 }
-// row defined in the design frame, rotated into world coords
-function rowD(ax, ay, bx, by, count, type, startId) {
-  const [a0, a1] = rot(ax, ay), [b0, b1] = rot(bx, by);
-  return rowPads(a0, a1, b0, b1, count, type, startId);
+function edgeDist(x, y, poly) {
+  let m = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const ax = poly[j][0], ay = poly[j][1], dx = poly[i][0] - ax, dy = poly[i][1] - ay;
+    const L = dx * dx + dy * dy; let t = L ? ((x - ax) * dx + (y - ay) * dy) / L : 0;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const d = Math.hypot(x - (ax + t * dx), y - (ay + t * dy)); if (d < m) m = d;
+  }
+  return m;
 }
-function glamping(startId) { return rowD(-25, 200, 60, 200, 6, 'glamping', startId); }
-const rotRoads = (rds) => rds.map(r => r.map(p => rot(p[0], p[1])));
+const inMargin = (x, y, m) => pip(x, y, PARCEL) && edgeDist(x, y, PARCEL) >= m;
 
-// "Optimized" — roomier layout, E–W rows stacked up the N–S strip.
-// Footprint kept well inside the parcel so nothing touches the surrounding roads.
-function layoutOptimized() {
-  let id = 1; const pads = [];
-  const rows = [
-    [-86, 158, 80, 158, 12, 'backin'],
-    [-90, 116, 82, 116, 13, 'backin'],
-    [-92, 74, 82, 74, 13, 'pullthru'],
-    [-90, 32, 80, 32, 13, 'pullthru'],
-    [-86, -10, 76, -10, 12, 'backin'],
-    [-82, -52, 72, -52, 11, 'backin'],
-    [-76, -94, 66, -94, 11, 'backin'],
-  ];
-  for (const [ax, ay, bx, by, n, t] of rows) { pads.push(...rowD(ax, ay, bx, by, n, t, id)); id += n; }
-  pads.push(...rowD(-68, -140, 58, -140, 8, 'premium', id)); id += 8;
-  pads.push(...glamping(id)); id += 6;
-  const roads = rotRoads([
-    [[-4, -160], [-4, 188]],
-    [[-90, 53], [82, 53]],
-    [[-84, -31], [74, -31]],
-  ]);
-  return { pads, roads };
-}
-
-// "Max density" — tighter rows for the revenue ceiling, same road buffer.
-function layoutMax() {
-  let id = 1; const pads = [];
-  const rows = [
-    [-88, 165, 82, 165, 13, 'backin'],
-    [-92, 127, 84, 127, 14, 'backin'],
-    [-94, 89, 84, 89, 14, 'backin'],
-    [-94, 51, 82, 51, 14, 'pullthru'],
-    [-92, 13, 80, 13, 13, 'pullthru'],
-    [-88, -25, 76, -25, 13, 'backin'],
-    [-84, -63, 72, -63, 12, 'backin'],
-    [-78, -101, 66, -101, 12, 'backin'],
-  ];
-  for (const [ax, ay, bx, by, n, t] of rows) { pads.push(...rowD(ax, ay, bx, by, n, t, id)); id += n; }
-  pads.push(...rowD(-70, -142, 60, -142, 9, 'premium', id)); id += 9;
-  pads.push(...glamping(id)); id += 6;
-  const roads = rotRoads([
-    [[-4, -162], [-4, 192]],
-    [[-92, 70], [84, 70]],
-    [[-90, -6], [78, -6]],
-    [[-84, -82], [72, -82]],
-  ]);
-  return { pads, roads };
+// ---------- parametric layout ----------
+// Fill the real parcel with rows along its long axis, every pad set back `margin` m
+// from each property line so nothing touches the roads. Re-snaps to any PARCEL edit.
+function fillLayout(rowGap, padGap, margin) {
+  let minu = 1e9, maxu = -1e9, minv = 1e9, maxv = -1e9;
+  for (const [x, y] of PARCEL) { const [u, v] = unrot(x, y); if (u < minu) minu = u; if (u > maxu) maxu = u; if (v < minv) minv = v; if (v > maxv) maxv = v; }
+  const rows = [];
+  for (let v = minv + rowGap / 2; v <= maxv; v += rowGap) {
+    let start = null, prev = null;
+    for (let u = minu; u <= maxu + 2; u += 2) {
+      const [wx, wy] = rot(u, v); const ok = u <= maxu && inMargin(wx, wy, margin);
+      if (ok && start === null) start = u;
+      if (!ok && start !== null) { if (prev - start >= padGap * 0.6) rows.push([start, prev, v]); start = null; }
+      if (ok) prev = u;
+    }
+  }
+  const pads = []; let id = 1; const nr = rows.length;
+  rows.forEach((r, ri) => {
+    const [ua, ub, v] = r;
+    let type = ri % 3 === 1 ? 'pullthru' : 'backin', cap = 0;
+    if (ri === nr - 1) { type = 'glamping'; cap = 6; }
+    else if (ri === nr - 2) type = 'premium';
+    let n = Math.max(1, Math.round((ub - ua) / padGap) + 1); if (cap) n = Math.min(n, cap);
+    for (let i = 0; i < n; i++) { const t = n === 1 ? 0.5 : i / (n - 1); const [x, y] = rot(ua + (ub - ua) * t, v); pads.push({ id: id++, type, x, y, rot: SITE_ROT + Math.PI / 2 }); }
+  });
+  // spine road down the band centreline, clipped to inside
+  const midv = (minv + maxv) / 2, spine = [];
+  for (let u = minu; u <= maxu; u += 8) { const p = rot(u, midv); if (inMargin(p[0], p[1], margin * 0.5)) spine.push(p); }
+  return { pads, roads: spine.length > 1 ? [spine] : [] };
 }
 
 export const LAYOUTS = {
-  optimized: { label: 'Optimized', build: layoutOptimized },
-  max: { label: 'Max density', build: layoutMax },
+  optimized: { label: 'Optimized', build: () => fillLayout(40, 11, 26) },
+  max: { label: 'Max density', build: () => fillLayout(34, 10.5, 24) },
 };
 
 // ---------- amenities (clickable, with ROI) ----------
@@ -201,12 +187,13 @@ export const AMENITIES = {
 
 // Amenity positions are authored in the design frame (gaps between rows), then
 // rotated into world meters so they line up with the tilted resort.
+// design-frame (long axis = u), rotated into world; nudged to sit in the parcel
 const AMEN_POS = {
-  'Gatehouse & Entry': [-4, -178], 'Office & Camp Store': [34, -116],
-  'Clubhouse & Pavilion': [40, 12], 'Resort Pool & Deck': [-46, 12],
-  'Bathhouse North': [-50, 95], 'Bathhouse South': [40, -73],
-  'Pickleball & Courts': [44, 138], 'Dog Park': [-54, -116],
-  'Fishing Pond': [58, 180], 'Maintenance & Storage': [-66, -150],
+  'Gatehouse & Entry': [-235, 6], 'Office & Camp Store': [-188, 0],
+  'Clubhouse & Pavilion': [8, 6], 'Resort Pool & Deck': [8, -34],
+  'Bathhouse North': [120, 18], 'Bathhouse South': [-110, -18],
+  'Pickleball & Courts': [188, 8], 'Dog Park': [62, 34],
+  'Fishing Pond': [232, -6], 'Maintenance & Storage': [-250, 22],
 };
 for (const [name, a] of Object.entries(AMENITIES)) {
   const d = AMEN_POS[name]; if (d) { const [wx, wy] = rot(d[0], d[1]); a.x = wx; a.y = wy; }
@@ -215,12 +202,13 @@ for (const [name, a] of Object.entries(AMENITIES)) {
 // area labels (world m). Resort labels follow the rotated layout; context
 // labels (Walmart, airport, marsh, parkway) sit on their real-world features.
 export const AREAS = [
-  { name: 'RESORT CORE', x: -2, y: 12 },
-  { name: 'GLAMPING', x: 18, y: 200 },
-  { name: 'AIRPORT', x: -300, y: 460 },
-  { name: 'SEA ISLAND PKWY · US-21', x: 40, y: -270 },
-  { name: 'WALMART', x: -215, y: 57 },
-  { name: 'AIRPORT CIR', x: 175, y: 120 },
+  { name: 'RESORT CORE', x: -1, y: 10 },
+  { name: 'GLAMPING', x: -70, y: 105 },
+  { name: 'AIRPORT', x: -330, y: 440 },
+  { name: 'SEA ISLAND PKWY · US-21', x: -100, y: -285 },
+  { name: 'WALMART', x: -224, y: 60 },
+  { name: 'AIRPORT CIR', x: 290, y: 120 },
+  { name: 'TAYLOR DR', x: -140, y: -213 },
 ];
 
 // ---------- financial model ----------
