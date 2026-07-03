@@ -360,6 +360,21 @@ const setText = (id, v) => { const el = document.getElementById(id); if (el) el.
 
 // ---------- detail panel ----------
 const detailEl = document.getElementById('detail');
+const mqMobile = matchMedia('(max-width:820px)');
+function renderDetail(html) {
+  detailEl.innerHTML = `<div id="dbar"><span class="grab"></span><button id="dclose" aria-label="Close details">✕</button></div>` + html;
+  document.getElementById('dclose').addEventListener('click', closeDetail);
+}
+function openDetail() {
+  if (mqMobile.matches) document.getElementById('pf').classList.remove('open');
+  closeLayers();
+  detailEl.classList.add('open'); detailEl.scrollTop = 0;
+}
+function closeDetail() { detailEl.classList.remove('open'); }
+function closeLayers() {
+  document.getElementById('left').classList.remove('open');
+  document.getElementById('scrim').classList.remove('open');
+}
 const fmtRow = (k, v) => `<div class="row"><span>${k}</span><b>${v}</b></div>`;
 const cardImg = (src) => `<img class="card-img" src="${src}" alt="" loading="lazy" onerror="this.style.display='none'">`;
 const AMEN_IMG = {
@@ -371,7 +386,7 @@ function showOverview() {
   highlightType(null);
   const mixRows = Object.entries(model.mix).filter(([, m]) => m.count).map(([k, m]) =>
     fmtRow(PAD_TYPES[k].label, `${m.count} × ${D0(m.rate)}/night`)).join('');
-  detailEl.innerHTML = `
+  renderDetail(`
     ${cardImg('assets/hero.jpg')}
     <div class="d-head"><span class="chip gold">MASTER PLAN</span><h2>${SITE.name}</h2>
     <p class="sub">${SITE.tagline}.</p></div>
@@ -383,7 +398,7 @@ function showOverview() {
     ${fmtRow('Yield on cost', PCT(model.yieldOnCost))}
     <h3>Site mix</h3>${mixRows}
     <h3>The location</h3><p class="note">${SITE.why}</p>
-    <p class="hint">Click any pad or amenity for its economics. Open <b>Pro Forma</b> to model the deal, and switch <b>layouts</b> on the left.</p>`;
+    <p class="hint">Tap any pad or amenity for its economics. Open <b>Pro Forma</b> to model the deal, and switch <b>layouts</b> in the Layers panel.</p>`);
 }
 function showPad(pad) {
   highlightType(pad.type);
@@ -391,7 +406,7 @@ function showPad(pad) {
   const m = model.mix[pad.type];
   const nightly = t.rate * inp.rate;
   const annual = nightly * 365 * inp.occupancy;
-  detailEl.innerHTML = `
+  renderDetail(`
     ${cardImg('assets/' + pad.type + '.jpg')}
     <div class="d-head"><span class="chip site">SITE #${pad.id}</span><h2>${t.label}</h2>
     <p class="sub">${m.count} sites of this type in the ${LAYOUTS[layoutKey].label} layout.</p></div>
@@ -400,7 +415,7 @@ function showPad(pad) {
     ${fmtRow('Site build cost', D0(t.siteCapex))}
     ${fmtRow('Revenue / site @ ' + PCT(inp.occupancy), D0(annual) + '/yr')}
     ${fmtRow('This type’s revenue', M(m.effective) + '/yr')}
-    <h3>Why this type</h3><p class="note">${padWhy(pad.type)}</p>`;
+    <h3>Why this type</h3><p class="note">${padWhy(pad.type)}</p>`);
 }
 function padWhy(type) {
   return ({
@@ -413,7 +428,7 @@ function padWhy(type) {
 function showAmenity(name) {
   highlightType(null);
   const a = AMENITIES[name]; const cat = CATS[a.cat];
-  detailEl.innerHTML = `
+  renderDetail(`
     ${cardImg('assets/' + (AMEN_IMG[name] || 'hero') + '.jpg')}
     <div class="d-head"><span class="chip phase">PHASE ${a.phase} · ${cat.label.toUpperCase()}</span><h2>${name}</h2>
     <p class="sub">${a.role}</p></div>
@@ -421,7 +436,7 @@ function showAmenity(name) {
     ${fmtRow('Cost to build', M(a.capex))}
     ${fmtRow('Revenue', a.revenue)}
     ${fmtRow('Payback', a.payback)}
-    <h3>Why it’s here</h3><p class="note">${a.why}</p>`;
+    <h3>Why it’s here</h3><p class="note">${a.why}</p>`);
 }
 function highlightType(type) {
   for (const o of padObjs) {
@@ -441,8 +456,8 @@ function buildList() {
   al.innerHTML = `<h4>Site mix</h4>${typeItems}<h4>Amenities</h4>${amenItems}`;
   al.addEventListener('click', e => {
     const it = e.target.closest('.aitem'); if (!it) return;
-    if (it.dataset.type) { const p = currentPads.find(p => p.type === it.dataset.type); if (p) { showPad(p); flyTo(p.x, p.y, 200); } }
-    else if (it.dataset.amen) { showAmenity(it.dataset.amen); const a = AMENITIES[it.dataset.amen]; flyTo(a.x, a.y, 150); }
+    if (it.dataset.type) { const p = currentPads.find(p => p.type === it.dataset.type); if (p) { showPad(p); openDetail(); flyTo(p.x, p.y, 200); } }
+    else if (it.dataset.amen) { showAmenity(it.dataset.amen); openDetail(); const a = AMENITIES[it.dataset.amen]; flyTo(a.x, a.y, 150); }
   });
 }
 function refreshCounts() {
@@ -490,8 +505,8 @@ canvas.addEventListener('click', () => {
   const hits = ray.intersectObjects(pickables, false);
   if (!hits.length) return;
   const u = hits[0].object.userData;
-  if (u.kind === 'pad') showPad(u.pad);
-  else if (u.kind === 'amenity') showAmenity(u.name);
+  if (u.kind === 'pad') { showPad(u.pad); openDetail(); }
+  else if (u.kind === 'amenity') { showAmenity(u.name); openDetail(); }
 });
 function hoverTick() {
   if (walkMode) { canvas.style.cursor = 'none'; return; }
@@ -537,8 +552,7 @@ addEventListener('keydown', e => {
   if (walkMode) return; // PointerLockControls handles its own Escape
   document.getElementById('brief').classList.add('off');
   document.getElementById('pf').classList.remove('open');
-  document.getElementById('left').classList.remove('open');
-  document.getElementById('scrim').classList.remove('open');
+  closeDetail(); closeLayers();
 });
 
 const walk = new PointerLockControls(camera, canvas);
@@ -635,15 +649,22 @@ function wireUI() {
     else if (v === 'survey' && layers.survey) layers.survey.visible = on;
   });
   document.getElementById('presets').addEventListener('change', e => { PRESETS[e.target.value]?.(); e.target.selectedIndex = 0; e.target.blur(); });
-  document.getElementById('sumbtn').addEventListener('click', () => { showOverview(); PRESETS.aerial(); });
+  document.getElementById('sumbtn').addEventListener('click', () => { showOverview(); openDetail(); PRESETS.aerial(); });
   document.getElementById('walkbtn').addEventListener('click', () => { if (walkMode) setWalk(false); else setWalk(true); });
   const pf = document.getElementById('pf');
-  document.getElementById('pfbtn').addEventListener('click', () => { pf.classList.toggle('open'); drawPF(); });
+  document.getElementById('pfbtn').addEventListener('click', () => {
+    const opening = !pf.classList.contains('open');
+    if (opening) { if (mqMobile.matches) closeDetail(); closeLayers(); }
+    pf.classList.toggle('open', opening); drawPF();
+  });
   document.getElementById('pfclose').addEventListener('click', () => pf.classList.remove('open'));
   const left = document.getElementById('left'), scrim = document.getElementById('scrim');
-  const closeLeft = () => { left.classList.remove('open'); scrim.classList.remove('open'); };
-  document.getElementById('layersbtn').addEventListener('click', () => { const on = !left.classList.contains('open'); left.classList.toggle('open', on); scrim.classList.toggle('open', on); });
-  scrim.addEventListener('click', closeLeft);
+  document.getElementById('layersbtn').addEventListener('click', () => {
+    const on = !left.classList.contains('open');
+    if (on && mqMobile.matches) { closeDetail(); pf.classList.remove('open'); }
+    left.classList.toggle('open', on); scrim.classList.toggle('open', on);
+  });
+  scrim.addEventListener('click', closeLayers);
   document.getElementById('briefbtn').addEventListener('click', () => { buildBrief(); document.getElementById('brief').classList.remove('off'); });
   document.getElementById('briefclose').addEventListener('click', () => document.getElementById('brief').classList.add('off'));
   document.getElementById('brief').addEventListener('click', e => { if (e.target.id === 'brief') document.getElementById('brief').classList.add('off'); });
